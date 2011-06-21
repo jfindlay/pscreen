@@ -17,8 +17,21 @@
 
 import os,sys,re
 from subprocess import call,Popen,PIPE
+from argparse import ArgumentParser
+
+# TODO:
+# - make profile_dir an invocation option
+# - use ansi-term for color support
 
 profile_dir = os.path.join(os.environ['HOME'],'.config/screen/profiles')
+
+def parse_args():
+  description='manage and interface with multiple screen profiles easily'
+  epilog='if no arguments are given, %(prog)s will list all available and instantiated screen profiles'
+  arg_parser = ArgumentParser(description=description,epilog=epilog)
+  arg_parser.add_argument('-v','--version',action='version',version='%(prog)s-0.2',help='show version')
+  arg_parser.add_argument('profile',nargs='?',type=str,help='screen profile to attach')
+  return arg_parser.parse_args(),arg_parser.format_usage(),arg_parser.format_help()
 
 class Profiles:
   def __init__(self,profile_dir):
@@ -86,27 +99,25 @@ class Sessions:
     return match_list
 
 def main():
+  args,usage,help = parse_args()
   profiles = Profiles(profile_dir)
   sessions = Sessions()
   output = sessions.report() + profiles.report(sessions)
 
-  try:
-    arg = sys.argv[1]
-  except:
+  if not args.profile:
     print output
-    sys.exit(0)
-
-  match_set = set(profiles.match(arg) + sessions.match(arg))
-  if 0 == len(match_set):
-    print 'no screen profiles in %s match %s' % (profile_dir,sys.argv[1])
-  elif 1 == len(match_set):
-    profile = match_set.pop()
-    if profile in sessions.session_list.keys():
-      call(['screen','-dr',profile])
-    else:
-      call(['screen','-c',os.path.join(profile_dir,profile)])
   else:
-    print 'which profile do you want?\n'
-    print sessions.report() + profiles.report(sessions)
+    match_set = set(profiles.match(args.profile) + sessions.match(args.profile))
+    if 0 == len(match_set):
+      print 'no screen profiles in %s match %s' % (profile_dir,sys.argv[1])
+    elif 1 == len(match_set):
+      profile = match_set.pop()
+      if profile in sessions.session_list.keys():
+        call(['screen','-dr',profile])
+      else:
+        call(['screen','-c',os.path.join(profile_dir,profile)])
+    else:
+      print 'which profile do you want?\n'
+      print sessions.report() + profiles.report(sessions)
 
 if __name__ == '__main__' : main()
