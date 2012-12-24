@@ -1,3 +1,3 @@
 - Put pscreen file in your path and copy the example profiles into ~/.config/screen/profiles.
 - Edit them as needed.
-- Currently, pscreen cannot create screen sessions from within other sessions.  First detach all nesting sessions to create a new session and then reattach as needed.
+- Currently, pscreen cannot create screen sessions from within other sessions.  First detach nesting session to create a new session and then reattach as needed.
