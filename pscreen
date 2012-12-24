@@ -19,105 +19,113 @@ import os,sys,re
 from subprocess import call,Popen,PIPE
 from argparse import ArgumentParser
 
-# TODO:
-# - make profile_dir an invocation option
-# - use ansi-term for color support
+def ensure_dir(directory):
+  '''
+  check whether the supplied directory exists, create it if it doesn't, and
+  exit if it is not a directory
+  '''
+  if not os.path.exists(directory):
+    if not os.path.islink(directory):
+      os.makedirs(directory)
+      return directory
+  elif os.path.isdir(directory):
+    return directory
+  sys.stderr.write('%s exists and is not a directory\n' % directory) ; sys.stderr.flush()
+  sys.exit(1)
 
-profile_dir = os.path.join(os.environ['HOME'],'.config/screen/profiles')
-
-def parse_args():
-  description='manage and interface with multiple screen profiles easily'
+def parse_args(def_prof_dir):
+  description='easily manage and interface with multiple screen profiles'
   epilog='if no arguments are given, %(prog)s will list all available and instantiated screen profiles'
   arg_parser = ArgumentParser(description=description,epilog=epilog)
   arg_parser.add_argument('-v','--version',action='version',version='%(prog)s-0.2',help='show version')
-  arg_parser.add_argument('profile',nargs='?',type=str,help='screen profile to attach')
-  return arg_parser.parse_args(),arg_parser.format_usage(),arg_parser.format_help()
+  arg_parser.add_argument('-d','--prof-dir',nargs='?',type=str,default=def_prof_dir,help='choose directory containing screen profiles [default:%s]' % def_prof_dir)
+  arg_parser.add_argument('prof_pattern',nargs='?',type=str,help='screen profile to {attach|instantiate}')
+  return arg_parser.parse_args()
 
 class Profiles:
-  def __init__(self,profile_dir):
-    ls = Popen(['ls',profile_dir],stdout=PIPE)
-    self.profile_list = re.split('\s+',ls.stdout.read()[:-1])
-    ls.stdout.close()
+  def __init__(self,prof_dir,prof_pattern):
+    self.prof_pattern = prof_pattern
+    self.profile_dict = {}
+    self.find_profiles(prof_dir)
+    self.find_sessions()
     self.matches = {}
-  def report(self,sessions):
-    if len(self.profile_list) == 0:
-      return ''
-    output = '[01;34m[Kavailable profiles:[m[K\n'
-    for profile in self.profile_list:
-      if not profile in sessions.session_list.keys():
-        if profile in self.matches.keys():
-          output += '\t' + self.matches[profile][0]
-          output += '[01;31m[K' + self.matches[profile][1] + '[m[K'
-          output += self.matches[profile][2] + '\n'
-        else:
-          output += '\t' + profile + '\n'
-    return output
-  def match(self,arg):
-    match_list = []
-    for profile in self.profile_list:
-      match = re.search(r'^(.*)(%s)(.*)$' % sys.argv[1],profile)
-      if match:
-        self.matches[match.group(0)] = (match.group(1),match.group(2),match.group(3))
-        match_list.append(match.group(0))
-    return match_list
-
-class Sessions:
-  def __init__(self):
-    screen = Popen(['screen','-ls'],stdout=PIPE)
+  def find_profiles(self,prof_dir):
+    '''
+    collect the profile names in prof_dir
+    '''
+    ls = Popen(['ls',prof_dir],stdout=PIPE,close_fds=True)
+    for profile in re.split('\s+',ls.stdout.read()[:-1]):
+      self.profile_dict[profile] = {'state':''} # instantiated profiles tell whether they're attached
+    ls.stdout.close()
+  def find_sessions(self):
+    '''
+    find which profiles are instantiated as sessions
+    '''
+    screen = Popen(['screen','-ls'],stdout=PIPE,close_fds=True)
     screen_output = re.split('\n',screen.stdout.read())[1:-3]
     screen.stdout.close()
-    self.session_list = {}
-    self.matches = {}
+    self.session_dict = {}
     for line in screen_output:
-      match = re.search('^\s+\d+\.(\S+).+\((\w+)\)$',line)
-      self.session_list[match.group(1)] = match.group(2)
-  def report(self):
-    if len(self.session_list) == 0:
-      return ''
-    output = '[01;34m[Kinstantiated profiles:[m[K\n'
-    for session in self.session_list:
-      if session in self.matches.keys():
-        output += '\t' + self.matches[session][0]
-        output += '[01;31m[K' + self.matches[session][1] + '[m[K'
-        output += self.matches[session][2]
-        if self.session_list[session] == 'Attached':
-          output += '  [01;32m[K[%s][m[K' % self.session_list[session]
-        output += '\n'
-      else:
-        output += '\t' + session
-        if self.session_list[session] == 'Attached':
-          output += '  [01;32m[K[%s][m[K' % self.session_list[session]
-        output += '\n'
-    return output
-  def match(self,arg):
-    match_list = []
-    for session in self.session_list:
-      match = re.search(r'^(.*)(%s)(.*)$' % sys.argv[1],session)
+      match = re.search('^\s+\d+\.(?P<name>\S+).+\((?P<state>\w+)\)$',line)
+      self.profile_dict[match.group('name')]['state'] = match.group('state') # '','attached','detached'
+  def match(self):
+    '''
+    find and return list of profiles matching user-supplied profile name
+    pattern
+    '''
+    for profile in self.profile_dict:
+      match = re.search(r'^(.*)(%s)(.*)$' % self.prof_pattern,profile)
       if match:
         self.matches[match.group(0)] = (match.group(1),match.group(2),match.group(3))
-        match_list.append(match.group(0))
-    return match_list
+    return self.matches.keys()
+  def report(self):
+    '''
+    return a list of profiles with portions of profile names that match
+    user-supplied invocation pattern highlighted
+    '''
+    output = '[01;34m[Kinstantiated profiles:[m[K\n'
+    for profile in sorted(self.profile_dict.keys()):
+      if self.profile_dict[profile]['state']:     # if profile instantiated
+        output += self.report_profile(profile)
+    output += '[01;34m[Kavailable profiles:[m[K\n'
+    for profile in sorted(self.profile_dict.keys()):
+      if not self.profile_dict[profile]['state']: # if profile not instantiated
+        output += self.report_profile(profile)
+    return output
+  def report_profile(self,profile):
+    output = ''
+    if profile in self.matches.keys():
+      output += '\t' + self.matches[profile][0]                         # print first part of profile name
+      output += '[01;31m[K' + self.matches[profile][1] + '[m[K' # print matching part
+      output += self.matches[profile][2]                                # print last part (only one match per name)
+    else:
+      output += '\t' + profile
+    if self.profile_dict[profile]['state'] == 'Attached':
+      output += '  [01;32m[K[%s][m[K' % self.profile_dict[profile]['state']
+    output += '\n'
+    return output
 
 def main():
-  args,usage,help = parse_args()
-  profiles = Profiles(profile_dir)
-  sessions = Sessions()
-  output = sessions.report() + profiles.report(sessions)
+  def_prof_dir = ensure_dir(os.path.join(os.environ['HOME'],'.config/screen/profiles'))
+  args = parse_args(def_prof_dir)
+  ensure_dir(args.prof_dir)
+  profiles = Profiles(args.prof_dir,args.prof_pattern)
 
-  if not args.profile:
-    print output
-  else:
-    match_set = set(profiles.match(args.profile) + sessions.match(args.profile))
-    if 0 == len(match_set):
-      print 'no screen profiles in %s match %s' % (profile_dir,sys.argv[1])
-    elif 1 == len(match_set):
+  if args.prof_pattern:
+    match_set = set(profiles.match())
+    if 0 == len(match_set):   # user-supplied profile pattern matches no profiles
+      print 'no screen profiles in %s match %s' % (args.prof_dir,args.prof_pattern)
+    elif 1 == len(match_set): # user-supplied profile pattern matches one profile
       profile = match_set.pop()
-      if profile in sessions.session_list.keys():
-        call(['screen','-dr',profile])
-      else:
-        call(['screen','-c',os.path.join(profile_dir,profile)])
-    else:
+      if profiles.profile_dict[profile]['state'] == '':
+        call(('screen','-c',os.path.join(args.prof_dir,profile)))
+      if profiles.profile_dict[profile]['state'] == 'Attached':
+        call(('screen','-dr',profile))
+      if profiles.profile_dict[profile]['state'] == 'Detached':
+        call(('screen','-r',profile))
+      return
+    else:                     # user-supplied profile pattern matches multiple profiles
       print 'which profile do you want?\n'
-      print sessions.report() + profiles.report(sessions)
+  sys.stdout.write(profiles.report()) ; sys.stdout.flush()
 
 if __name__ == '__main__' : main()

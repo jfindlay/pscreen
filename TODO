@@ -1,0 +1,7 @@
+ - use ansi-term for color support
+ - list instantiated profiles in tree format
+ - fix nested instantiation problem (screen sessions cannot be created within other sessions)
+ - add option to delete a session
+ - use standard python installation method to install program and example profiles (default,example)
+ - ensure screen is installed
+ - validate command line directory argument through argparse
