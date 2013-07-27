@@ -1,8 +1,6 @@
 source $HOME/.config/screen/profiles/default
 
-chdir $HOME/example/dir
-sessionname work
-screen -t edit vim file.c
-chdir ..
+sessionname util
 screen
-screen -t remote 3 ssh user@remote.com
+screen -t edit
+screen -t pythn

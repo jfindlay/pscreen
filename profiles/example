@@ -1,7 +1,7 @@
 source $HOME/.config/screen/profiles/default
 
 chdir $HOME/example/dir
-sessionname work
+sessionname example
 screen -t edit vim file.c
 chdir ..
 screen
