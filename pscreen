@@ -30,7 +30,7 @@ def ensure_dir(directory):
       return directory
   elif os.path.isdir(directory):
     return directory
-  sys.stderr.write('%s exists and is not a directory\n' % directory) ; sys.stderr.flush()
+  sys.stderr.write('{d} exists and is not a directory\n'.format(d=directory)) ; sys.stderr.flush()
   sys.exit(1)
 
 def parse_args(def_prof_dir):
@@ -38,7 +38,7 @@ def parse_args(def_prof_dir):
   epilog='if no arguments are given, %(prog)s will list all available and instantiated screen profiles'
   arg_parser = ArgumentParser(description=description,epilog=epilog)
   arg_parser.add_argument('-v','--version',action='version',version='%(prog)s-0.2',help='show version')
-  arg_parser.add_argument('-d','--prof-dir',nargs='?',type=str,default=def_prof_dir,help='choose directory containing screen profiles [default:%s]' % def_prof_dir)
+  arg_parser.add_argument('-d','--prof-dir',nargs='?',type=str,default=def_prof_dir,help='choose directory containing screen profiles [default:{d}]'.format(d=def_prof_dir))
   arg_parser.add_argument('prof_pattern',nargs='?',type=str,help='screen profile to {attach|instantiate}')
   return arg_parser.parse_args()
 
@@ -54,7 +54,7 @@ class Profiles:
     collect the profile names in prof_dir
     '''
     ls = Popen(['ls',prof_dir],stdout=PIPE,close_fds=True)
-    for profile in re.split('\s+',ls.stdout.read()[:-1]):
+    for profile in re.split(r'\s+',ls.stdout.read().decode())[:-1]:
       self.profile_dict[profile] = {'state':''} # instantiated profiles tell whether they're attached
     ls.stdout.close()
   def find_sessions(self):
@@ -62,7 +62,7 @@ class Profiles:
     find which profiles are instantiated as sessions
     '''
     screen = Popen(['screen','-ls'],stdout=PIPE,close_fds=True)
-    screen_output = re.split('\n',screen.stdout.read())[1:-3]
+    screen_output = re.split('\n',screen.stdout.read().decode())[1:-3]
     screen.stdout.close()
     self.session_dict = {}
     for line in screen_output:
@@ -76,7 +76,7 @@ class Profiles:
     pattern
     '''
     for profile in self.profile_dict:
-      match = re.search(r'^(.*)(%s)(.*)$' % self.prof_pattern,profile)
+      match = re.search(r'^(.*)({p})(.*)$'.format(p=self.prof_pattern),profile)
       if match:
         self.matches[match.group(0)] = (match.group(1),match.group(2),match.group(3))
     return self.matches.keys()
@@ -103,7 +103,7 @@ class Profiles:
     else:
       output += '\t' + profile
     if self.profile_dict[profile]['state'] == 'Attached':
-      output += '  [01;32m[K[%s][m[K' % self.profile_dict[profile]['state']
+      output += '  [01;32m[K[{s}][m[K'.format(s=self.profile_dict[profile]['state'])
     output += '\n'
     return output
 
@@ -116,7 +116,7 @@ def main():
   if args.prof_pattern:
     match_set = set(profiles.match())
     if 0 == len(match_set):   # user-supplied profile pattern matches no profiles
-      print 'no screen profiles in %s match %s' % (args.prof_dir,args.prof_pattern)
+      print('no screen profiles in {d} match {p}'.format(d=args.prof_dir,p=args.prof_pattern))
     elif 1 == len(match_set): # user-supplied profile pattern matches one profile
       profile = match_set.pop()
       if profiles.profile_dict[profile]['state'] == '':
@@ -127,7 +127,7 @@ def main():
         call(('screen','-r',profile))
       return
     else:                     # user-supplied profile pattern matches multiple profiles
-      print 'which profile do you want?\n'
+      print('which profile do you want?\n')
   sys.stdout.write(profiles.report()) ; sys.stdout.flush()
 
 if __name__ == '__main__' : main()
