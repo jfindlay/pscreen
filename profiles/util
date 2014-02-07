@@ -3,4 +3,4 @@ source $HOME/.config/screen/profiles/default
 sessionname util
 screen
 screen -t edit
-screen -t pythn
+screen -t python
