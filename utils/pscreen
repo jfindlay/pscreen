@@ -17,46 +17,38 @@
 
 import os,sys,re
 from subprocess import call,Popen,PIPE
-from argparse import ArgumentParser
-
-def ensure_dir(directory):
-  '''
-  check whether the supplied directory exists, create it if it doesn't, and
-  exit if it is not a directory
-  '''
-  if not os.path.exists(directory):
-    if not os.path.islink(directory):
-      os.makedirs(directory)
-      return directory
-  elif os.path.isdir(directory):
-    return directory
-  sys.stderr.write('{d} exists and is not a directory\n'.format(d=directory)) ; sys.stderr.flush()
-  sys.exit(1)
-
-def parse_args(def_prof_dir):
-  description='easily manage and interface with multiple screen profiles'
-  epilog='if no arguments are given, %(prog)s will list all available and instantiated screen profiles'
-  arg_parser = ArgumentParser(description=description,epilog=epilog)
-  arg_parser.add_argument('-v','--version',action='version',version='%(prog)s-0.2',help='show version')
-  arg_parser.add_argument('-d','--prof-dir',nargs='?',type=str,default=def_prof_dir,help='choose directory containing screen profiles [default:{d}]'.format(d=def_prof_dir))
-  arg_parser.add_argument('prof_pattern',nargs='?',type=str,help='screen profile to {attach|instantiate}')
-  return arg_parser.parse_args()
+from argparse import ArgumentParser,ArgumentTypeError
 
 class Profiles:
-  def __init__(self,prof_dir,prof_pattern):
-    self.prof_pattern = prof_pattern
+  def __init__(self,*args,**kwargs):
+    self.prof_pattern = kwargs['prof_pattern']
     self.profile_dict = {}
-    self.find_profiles(prof_dir)
+    self.prof_dir = kwargs['prof_dir']
+    self.find_profiles()
     self.find_sessions()
     self.matches = {}
-  def find_profiles(self,prof_dir):
+    if self.prof_pattern:
+      self.match()
+      match_set = set(self.matches)
+      if 0 == len(match_set):   # user-supplied profile pattern matches no profiles
+        print('no screen profiles in {d} match {p}'.format(d=self.prof_dir,p=self.prof_pattern))
+      elif 1 == len(match_set): # user-supplied profile pattern matches one profile
+        profile = match_set.pop()
+        if self.profile_dict[profile]['state'] == '':
+          call(('screen','-c',os.path.join(self.prof_dir,profile)))
+        if self.profile_dict[profile]['state'] == 'Attached':
+          call(('screen','-dr',profile))
+        if self.profile_dict[profile]['state'] == 'Detached':
+          call(('screen','-r',profile))
+      else:                     # user-supplied profile pattern matches multiple profiles
+        print('which profile do you want?\n')
+    print(self.report())
+  def find_profiles(self):
     '''
     collect the profile names in prof_dir
     '''
-    ls = Popen(['ls',prof_dir],stdout=PIPE,close_fds=True)
-    for profile in re.split(r'\s+',ls.stdout.read().decode())[:-1]:
+    for profile in os.listdir(self.prof_dir):
       self.profile_dict[profile] = {'state':''} # instantiated profiles tell whether they're attached
-    ls.stdout.close()
   def find_sessions(self):
     '''
     find which profiles are instantiated as sessions
@@ -79,7 +71,6 @@ class Profiles:
       match = re.search(r'^(.*)({p})(.*)$'.format(p=self.prof_pattern),profile)
       if match:
         self.matches[match.group(0)] = (match.group(1),match.group(2),match.group(3))
-    return self.matches.keys()
   def report(self):
     '''
     return a list of profiles with portions of profile names that match
@@ -108,26 +99,36 @@ class Profiles:
     return output
 
 def main():
-  def_prof_dir = ensure_dir(os.path.join(os.environ['HOME'],'.config/screen/profiles'))
-  args = parse_args(def_prof_dir)
-  ensure_dir(args.prof_dir)
-  profiles = Profiles(args.prof_dir,args.prof_pattern)
+  def get_version():
+    #return Popen(('git','describe'),stdout=PIPE).stdout.read()
+    return '1.1'
+  def directory(d):
+    '''
+    check whether the supplied directory exists, create it if it doesn't, and
+    exit if it is not a directory
+    '''
+    if not os.path.exists(d):
+      if not os.path.islink(d):
+        os.makedirs(d)
+        return d
+      raise ArgumentTypeError('{d} exists and is not a directory'.format(d=directory))
+    elif os.path.isdir(d):
+      return d
+    raise ArgumentTypeError('cannot create directory {d}'.format(d=directory))
+  def parse_args(prof_dir):
+    description='easily manage and interface with multiple screen profiles'
+    epilog='if no arguments are given, %(prog)s will list all available and instantiated screen profiles'
+    arg_parser = ArgumentParser(description=description,epilog=epilog)
+    arg_parser.add_argument('-v','--version',action='version',version='%(prog)s-{0}'.format(get_version()),help='show version')
+    arg_parser.add_argument('-d','--prof-dir',nargs=1,type=directory,default=prof_dir,help='choose directory containing screen profiles [default:%(default)s]')
+    arg_parser.add_argument('prof_pattern',nargs='?',type=str,help='screen profile to {attach|instantiate}')
+    return vars(arg_parser.parse_args())
 
-  if args.prof_pattern:
-    match_set = set(profiles.match())
-    if 0 == len(match_set):   # user-supplied profile pattern matches no profiles
-      print('no screen profiles in {d} match {p}'.format(d=args.prof_dir,p=args.prof_pattern))
-    elif 1 == len(match_set): # user-supplied profile pattern matches one profile
-      profile = match_set.pop()
-      if profiles.profile_dict[profile]['state'] == '':
-        call(('screen','-c',os.path.join(args.prof_dir,profile)))
-      if profiles.profile_dict[profile]['state'] == 'Attached':
-        call(('screen','-dr',profile))
-      if profiles.profile_dict[profile]['state'] == 'Detached':
-        call(('screen','-r',profile))
-      return
-    else:                     # user-supplied profile pattern matches multiple profiles
-      print('which profile do you want?\n')
-  sys.stdout.write(profiles.report()) ; sys.stdout.flush()
+  prof_dir = directory(os.path.join(os.environ['HOME'],'.config/screen/profiles'))
+  Profiles(**parse_args(prof_dir))
 
-if __name__ == '__main__' : main()
+if __name__ == '__main__':
+  try:
+    main()
+  except KeyboardInterrupt:
+    sys.exit()
