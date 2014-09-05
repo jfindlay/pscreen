@@ -1,3 +1,9 @@
-- Put or link pscreen file into your path and copy the example profile dir into ~/.config/screen/profiles.
-- Edit them as needed.
-- Currently, pscreen cannot create screen sessions from within other sessions.  First detach nesting session to create a new session and then reattach as needed.
+install:
+python setup.py install --prefix=~/.local
+cd ~/.local/share/pscreen/profiles ; vim my_profile
+
+uninstall:
+python setup.py install --prefix=~/.local --record inst
+rm -v $(<inst) inst
+
+Currently, pscreen cannot create screen sessions from within other sessions.  First detach nesting session to create a new session and then reattach as needed.
