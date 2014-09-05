@@ -125,7 +125,7 @@ def main():
     arg_parser.add_argument('prof_pattern',nargs='?',type=str,help='screen profile to {attach|instantiate}')
     return vars(arg_parser.parse_args())
 
-  prof_dir = directory(os.path.join(os.environ['HOME'],'.config/screen/profiles'))
+  prof_dir = directory(os.path.join(os.environ['HOME'],'.local/share/pscreen/profiles'))
   Profiles(**parse_args(prof_dir))
 
 if __name__ == '__main__':

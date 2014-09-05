@@ -14,7 +14,7 @@ bind ^] paste [.]
 bind = resize =
 bind - resize -3
 bind + resize +3
-bufferfile $HOME/.config/screen/exchange
+bufferfile /var/tmp/pscreen/exchange
 crlf off
 defscrollback 8192
 defutf8 on

@@ -1,6 +1,6 @@
-source $HOME/.config/screen/profiles/default
+source $HOME/.local/share/pscreen/profiles/default
 
 sessionname edit-profiles
-chdir $HOME/.config/screen/profiles
+chdir $HOME/.local/share/pscreen/profiles
 screen
 screen -t edit vim .

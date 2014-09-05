@@ -1,4 +1,4 @@
-source $HOME/.config/screen/profiles/default
+source $HOME/.local/share/pscreen/profiles/default
 
 sessionname util
 screen
