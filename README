@@ -1,9 +1,10 @@
 install:
-python setup.py install --prefix=~/.local
-cd ~/.local/share/pscreen/profiles ; vim my_profile
+  python setup.py install --prefix=~/.local
+  pscreen edit-profiles
+  # interact with screen as you normally would
 
 uninstall:
-python setup.py install --prefix=~/.local --record inst
-rm -v $(<inst) inst
+  python setup.py install --prefix=~/.local --record inst
+  rm -v $(<inst) inst
 
 Currently, pscreen cannot create screen sessions from within other sessions.  First detach nesting session to create a new session and then reattach as needed.
