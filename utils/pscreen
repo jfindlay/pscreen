@@ -60,11 +60,12 @@ class Profiles:
     self.session_dict = {}
     for line in screen_output:
       match = re.search(r'^\s+\d+\.(?P<name>\S+).+\((?P<state>\w+)\)$',line)
+      if not match: # to deerror intermittent problem
+        print('line: {0}'.format(line))
+        print('name: {0}, state: {1}'.format(name,state))
+        print('screen_output: {0}'.format(screen_output))
       name = match.group('name')
       state = match.group('state')
-      if not name: # to deerror intermittent problem
-        print(name,state)
-        print(screen_output)
       if not name in self.profile_dict:
         self.profile_dict[name] = {}
       self.profile_dict[name]['state'] = state # '','attached','detached'
