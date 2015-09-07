@@ -1,3 +1,2 @@
- - use ansi-term for color support
  - list instantiated profiles in tree format
  - fix nested instantiation problem (screen sessions cannot be created within other sessions)
