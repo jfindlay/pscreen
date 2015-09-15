@@ -113,12 +113,13 @@ class Profiles:
     '''
     with open(os.devnull,'w') as null:
       Popen((self.screen_exec,'-wipe'),stdout=null,stderr=null) # clear any possible dead sessions
-    screen = Popen((self.screen_exec,'-ls'),stdout=PIPE,close_fds=True)
+    screen = Popen((self.screen_exec,'-ls'),stdout=PIPE)
     screen_output = screen.stdout.read().decode().strip().split(os.linesep)[1:-1]
     screen.stdout.close()
 
     for line in screen_output:
-      screen_name,screen_state = line.split()
+      split_line = line.split()
+      screen_name,screen_state = split_line[0],split_line[-1]
       pid,name = screen_name.split('.')
       state = screen_state.lstrip('(').rstrip(')')
 
@@ -246,7 +247,7 @@ def get_opts():
       raise ArgumentTypeError('screen program {p} not executable')
     return p
 
-  screen_exec = Popen(('which','screen'),stdout=PIPE,close_fds=True).stdout.read().decode().strip()
+  screen_exec = Popen(('which','screen'),stdout=PIPE).stdout.read().decode().strip()
   prof_dir = directory(os.path.join(os.environ['HOME'],'.local/share/pscreen/profiles'))
 
   def parse_args():
