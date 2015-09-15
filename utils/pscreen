@@ -21,6 +21,14 @@ from subprocess import call,Popen,PIPE
 from argparse import ArgumentParser,ArgumentTypeError,ArgumentDefaultsHelpFormatter
 
 
+def syscmd(*cmd):
+  '''
+  run a system command
+  '''
+  out,err = Popen(cmd,stdout=PIPE,stderr=PIPE).communicate()
+  return out.decode().strip(),err.decode().strip()
+
+
 class TextFormat(object):
   '''
   ANSI Select Graphic Rendition (SGR) code escape sequence.
@@ -111,13 +119,10 @@ class Profiles:
     '''
     find which profiles are instantiated as sessions
     '''
-    with open(os.devnull,'w') as null:
-      Popen((self.screen_exec,'-wipe'),stdout=null,stderr=null) # clear any possible dead sessions
-    screen = Popen((self.screen_exec,'-ls'),stdout=PIPE)
-    screen_output = screen.stdout.read().decode().strip().split(os.linesep)[1:-1]
-    screen.stdout.close()
+    syscmd(self.screen_exec,'-wipe') # clear any possible dead sessions
+    screen_output = syscmd(self.screen_exec,'-ls')[0]
 
-    for line in screen_output:
+    for line in screen_output.split(os.linesep)[1:-1]:
       split_line = line.split()
       screen_name,screen_state = split_line[0],split_line[-1]
       pid,name = screen_name.split('.')
@@ -247,7 +252,7 @@ def get_opts():
       raise ArgumentTypeError('screen program {p} not executable')
     return p
 
-  screen_exec = Popen(('which','screen'),stdout=PIPE).stdout.read().decode().strip()
+  screen_exec = syscmd('which','screen')[0]
   prof_dir = directory(os.path.join(os.environ['HOME'],'.local/share/pscreen/profiles'))
 
   def parse_args():
