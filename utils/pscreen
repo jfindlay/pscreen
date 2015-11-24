@@ -132,7 +132,7 @@ class Profiles:
       elif state == 'Detached': state = False
       else:                     state = None
 
-      self.data[name]['state'] = state
+      self.data[name] = {'state':state}
 
   def select(self):
     '''
