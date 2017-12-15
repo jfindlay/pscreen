@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os,sys,stat,six
+import os,sys,stat
 from getpass import getuser
 from subprocess import call,Popen,PIPE
 from argparse import ArgumentParser,ArgumentTypeError,ArgumentDefaultsHelpFormatter
@@ -66,7 +66,7 @@ class TextFormat(object):
           '{0}Can you read this?{1}'
         ).format(red_underlined,TextFormat('reset'))
     '''
-    self.codes = [self.all_codes[attr.lower()] for attr in attrs if isinstance(attr,six.string_types)]
+    self.codes = [self.all_codes[attr.lower()] for attr in attrs if isinstance(attr,str)]
 
     if kwargs.get('reset',True):
       self.codes[:0] = [self.all_codes['reset']]
