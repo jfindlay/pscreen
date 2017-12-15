@@ -224,7 +224,7 @@ def get_opts():
     '''
     retrieve program version
     '''
-    return '1.2'
+    return '1.3.2'
 
   def directory(d):
     '''
@@ -240,19 +240,6 @@ def get_opts():
       return d
     raise ArgumentTypeError('cannot create directory {d}'.format(d=directory))
 
-  def exe(p):
-    '''
-    check whether the supplied path exists and is executable
-    '''
-    if not len(p):
-      raise ArgumentTypeError('no screen executable found')
-    if not os.path.isfile(p):
-      raise ArgumentTypeError('path to screen executable {p} is not a file')
-    if not os.access(p,os.X_OK):
-      raise ArgumentTypeError('screen program {p} not executable')
-    return p
-
-  screen_exec = syscmd('which','screen')[0]
   prof_dir = directory(os.path.join(os.environ['HOME'],'.local/share/pscreen/profiles'))
 
   def parse_args():
@@ -260,7 +247,7 @@ def get_opts():
     epilog='if no arguments are given, %(prog)s will list all available and instantiated screen profiles'
     arg_parser = ArgumentParser(description=description,epilog=epilog,formatter_class=ArgumentDefaultsHelpFormatter)
     arg_parser.add_argument('-v','--version',action='version',version='%(prog)s-{0}'.format(get_version()),help='show version')
-    arg_parser.add_argument('-s','--screen-exec',type=exe,default=screen_exec,help='path to screen executable')
+    arg_parser.add_argument('-s','--screen-exec',type=str,default='screen',help='path to screen executable')
     arg_parser.add_argument('-d','--prof-dir',type=directory,default=prof_dir,help='directory containing screen profiles')
     arg_parser.add_argument('-n','--no-color',action='store_true',help='disable colorized output')
     arg_parser.add_argument('profile',nargs='?',type=str,help='screen profile to {attach|instantiate}')
