@@ -256,14 +256,6 @@ def get_opts():
   return parse_args()
 
 
-def main():
-  '''
-  run pscreen
-  '''
-  Profiles(**get_opts())
-
 if __name__ == '__main__':
-  try:
-    main()
-  except KeyboardInterrupt:
-    sys.exit()
+  try: Profiles(**get_opts())
+  except KeyboardInterrupt: sys.exit()
